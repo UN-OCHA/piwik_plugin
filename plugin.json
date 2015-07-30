@@ -1,0 +1,16 @@
+{
+ "name": "HumanitarianResponse",
+ "version": "0.1.0",
+ "description": "Plugin for Humanitarianresponse statistics",
+ "theme": false,
+ "require": {
+    "piwik": ">=2.8.0"
+ },
+ "authors": [
+     {
+         "name": "Piwik",
+         "email": "",
+         "homepage": ""
+     }
+ ]
+}
