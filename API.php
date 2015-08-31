@@ -94,6 +94,7 @@ class API extends \Piwik\Plugin\API
      */
     public function getSummaryStats($idSite, $period, $date, $segment = false)
     {
+        set_time_limit(600);
         $table = new DataTable();
         $operations_url = 'http://www.humanitarianresponse.info/api/v1.0/operations/?fields=id';
         if ($operations_raw = @file_get_contents($operations_url)) {
