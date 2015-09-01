@@ -18,54 +18,103 @@ use Piwik\DataTable\Row;
  */
 class API extends \Piwik\Plugin\API
 {
-    /**
-     * Another example method that returns a data table.
-     * @param int    $idSite
-     * @param string $period
-     * @param string $date
-     * @param bool|string $segment
-     * @return DataTable
-     */
-    public function getSpaceSummary($idSite, $period, $date, $space_id, $space_type = 'operation')
-    {
+  /**
+   * Another example method that returns a data table.
+   * @param int    $idSite
+   * @param string $period
+   * @param string $date
+   * @param bool|string $segment
+   * @return DataTable
+   */
+  public function getSpaceSummary($idSite, $period, $date, $space_id, $space_type = 'operation')
+  {
 
-        $table = new DataTable();
+    $table = new DataTable();
 
-        $params = array(
-          'idSite' => $idSite,
-          'period' => $period,
-          'date'   => $date,
-          'segment' => 'customVariablePageName1==spaces;customVariablePageValue1=@'.$space_id,
-        );
+    $params = array(
+      'idSite' => $idSite,
+      'period' => $period,
+      'date'   => $date,
+      'segment' => 'customVariablePageName1==spaces;customVariablePageValue1=@'.$space_id,
+    );
 
-        $data = \Piwik\API\Request::processRequest('API.get', $params);
+    $data = \Piwik\API\Request::processRequest('API.get', $params);
 
 
-        $tarray = $this->getTypes($params);
+    $tarray = $this->getTypes($params);
 
-        $data->getRowFromId(0)->addColumns($tarray);
+    $data->getRowFromId(0)->addColumns($tarray);
 
-        $table->addRow($data->getRowFromId(0));
+    $table->addRow($data->getRowFromId(0));
 
-        // Get country ISO2 code
-        $hr_url = 'http://www.humanitarianresponse.info/api/v1.0/'.$space_type.'s/'.$space_id;
-        if ($space_raw = @file_get_contents($hr_url)) {
-          $space = json_decode($space_raw);
-          $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
-          if (isset($space->data[0]->country)) {
-            $iso2 = $space->data[0]->country->pcode;
-            $cparams = $params;
-            $cparams['segment'] = $params['segment'] . ';countryCode=='.$iso2;
-            $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
-            $cdata->getRowFromId(0)->addColumn('label', $space->data[0]->label.' - in country');
-            $ctarray = $this->getTypes($cparams);
-            $cdata->getRowFromId(0)->addColumns($ctarray);
-            $table->addRow($cdata->getRowFromId(0));
-          }
-        }
-
-        return $table;
+    // Get country ISO2 code
+    $hr_url = 'https://www.humanitarianresponse.info/api/v1.0/'.$space_type.'s/'.$space_id;
+    if ($space_raw = @file_get_contents($hr_url)) {
+      $space = json_decode($space_raw);
+      $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
+      if (isset($space->data[0]->country)) {
+        $iso2 = $space->data[0]->country->pcode;
+        $cparams = $params;
+        $cparams['segment'] = $params['segment'] . ';countryCode=='.$iso2;
+        $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
+        $cdata->getRowFromId(0)->addColumn('label', $space->data[0]->label.' - in country');
+        $ctarray = $this->getTypes($cparams);
+        $cdata->getRowFromId(0)->addColumns($ctarray);
+        $table->addRow($cdata->getRowFromId(0));
+      }
     }
+
+    return $table;
+  }
+
+  /**
+   * Another example method that returns a data table.
+   * @param int    $idSite
+   * @param string $period
+   * @param string $date
+   * @param bool|string $segment
+   * @return DataTable
+   */
+  public function getClusterSummary($idSite, $period, $date, $cluster_id, $cluster_type = 'bundles')
+  {
+
+    $table = new DataTable();
+
+    $params = array(
+      'idSite' => $idSite,
+      'period' => $period,
+      'date'   => $date,
+      'segment' => 'customVariablePageName2==' . $cluster_type . ';customVariablePageValue2=@' . $cluster_id,
+    );
+
+    $data = \Piwik\API\Request::processRequest('API.get', $params);
+
+
+    $tarray = $this->getTypes($params);
+
+    $data->getRowFromId(0)->addColumns($tarray);
+
+    $table->addRow($data->getRowFromId(0));
+
+    // Get country ISO2 code
+    $hr_url = 'https://www.humanitarianresponse.info/api/v1.0/'.$cluster_type.'s/'.$cluster_id;
+    if ($space_raw = @file_get_contents($hr_url)) {
+      $space = json_decode($space_raw);
+      $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
+      if (isset($space->data[0]->country)) {
+        $iso2 = $space->data[0]->country->pcode;
+        $cparams = $params;
+        $cparams['segment'] = $params['segment'] . ';countryCode=='.$iso2;
+        $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
+        $cdata->getRowFromId(0)->addColumn('label', $space->data[0]->label.' - in country');
+        $ctarray = $this->getTypes($cparams);
+        $cdata->getRowFromId(0)->addColumns($ctarray);
+        $table->addRow($cdata->getRowFromId(0));
+      }
+    }
+
+    return $table;
+  }
 
     private function getTypes($params) {
       $tarray = array();
