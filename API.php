@@ -75,7 +75,7 @@ class API extends \Piwik\Plugin\API
    * @param bool|string $segment
    * @return DataTable
    */
-  public function getClusterSummary($idSite, $period, $date, $cluster_id, $cluster_type = 'bundles')
+  public function getClusterSummary($idSite, $period, $date, $cluster_id, $cluster_type = 'bundle')
   {
 
     $table = new DataTable();
@@ -84,7 +84,7 @@ class API extends \Piwik\Plugin\API
       'idSite' => $idSite,
       'period' => $period,
       'date'   => $date,
-      'segment' => 'customVariablePageName2==' . $cluster_type . ';customVariablePageValue2=@' . $cluster_id,
+      'segment' => 'customVariablePageName2==' . $cluster_type . 's;customVariablePageValue2=@' . $cluster_id,
     );
 
     $data = \Piwik\API\Request::processRequest('API.get', $params);
@@ -97,12 +97,12 @@ class API extends \Piwik\Plugin\API
     $table->addRow($data->getRowFromId(0));
 
     // Get country ISO2 code
-    $hr_url = 'https://www.humanitarianresponse.info/api/v1.0/'.$cluster_type.'s/'.$cluster_id;
+    $hr_url = 'https://www.humanitarianresponse.info/api/v1.0/' . $cluster_type . 's/' . $cluster_id;
     if ($space_raw = @file_get_contents($hr_url)) {
       $space = json_decode($space_raw);
       $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
-      if (isset($space->data[0]->country)) {
-        $iso2 = $space->data[0]->country->pcode;
+      if (isset($space->data[0]->operation->country)) {
+        $iso2 = $space->data[0]->operation->country->pcode;
         $cparams = $params;
         $cparams['segment'] = $params['segment'] . ';countryCode=='.$iso2;
         $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
