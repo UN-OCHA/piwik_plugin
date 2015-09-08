@@ -101,10 +101,10 @@ class API extends \Piwik\Plugin\API
     if ($space_raw = @file_get_contents($hr_url)) {
       $space = json_decode($space_raw);
       $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
-      if (isset($space->data[0]->operation->country)) {
-        $iso2 = $space->data[0]->operation->country->pcode;
+      if (isset($space->data[0]->operation[0]->country)) {
+        $iso2 = $space->data[0]->operation[0]->country->pcode;
         $cparams = $params;
-        $cparams['segment'] = $params['segment'] . ';countryCode=='.$iso2;
+        $cparams['segment'] = $params['segment'] . ';countryCode==' . $iso2;
         $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
         $cdata->getRowFromId(0)->addColumn('label', $space->data[0]->label.' - in country');
         $ctarray = $this->getTypes($cparams);
