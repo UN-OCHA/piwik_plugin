@@ -70,16 +70,16 @@ class GetSummaryStats extends Base
         }
 
         // $view->config->show_search = false;
-        $view->requestConfig->filter_sort_column = 'nb_visits';
-        $view->requestConfig->filter_limit = '100';
+        // $view->requestConfig->filter_sort_column = 'nb_visits';
+        // $view->requestConfig->filter_limit = '10';
 
-        $view->config->addTranslation('Actions_nb_downloads', 'Number of downloads');
+        $view->config->addTranslation('nb_downloads', 'Number of downloads');
         $view->config->addTranslation('nb_downloads_hr_document', 'Number of document downloads');
         $view->config->addTranslation('nb_downloads_hr_infographic', 'Number of infographic downloads');
         $view->config->addTranslation('nb_downloads_hr_assessment', 'Number of assessment downloads');
         $view->config->addTranslation('nb_downloads_hr_dataset', 'Number of dataset downloads');
 
-        $view->config->columns_to_display = array('label', 'nb_visits', 'Actions_nb_downloads', 'nb_downloads_hr_document', 'nb_downloads_hr_infographic', 'nb_downloads_hr_assessment', 'nb_downloads_hr_dataset');
+        $view->config->columns_to_display = array('label', 'nb_visits', 'nb_downloads', 'nb_downloads_hr_document', 'nb_downloads_hr_infographic', 'nb_downloads_hr_assessment', 'nb_downloads_hr_dataset');
     }
 
     /**
@@ -100,7 +100,6 @@ class GetSummaryStats extends Base
      * make it work. Usually you should NOT have to overwrite this render method.
      *
      * @return string
-     *
     public function render()
     {
         $view = new View('@HumanitarianResponse/getSummaryStats');
