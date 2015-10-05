@@ -8,7 +8,6 @@
  */
 namespace Piwik\Plugins\HumanitarianResponse;
 
-use Piwik\Archive;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 
@@ -19,226 +18,152 @@ use Piwik\DataTable\Row;
  */
 class API extends \Piwik\Plugin\API
 {
-
-  /**
-   * @param $space_id
-   * @param string $space_type
-   * @return array
-   */
-  protected function prepareSettingsForSpaceSummary($space_id, $space_type = 'operation', $label = '')
-  {
-    return  array(
-      'name' => 'customVariablePageName1',
-      'type' => $space_type . 's',
-      'context' => 'spaces',
-      'value' => 'customVariablePageValue1',
-      'id' => $space_id,
-      'label' => $label,
-    );
-  }
-
-  /**
-   * Display space summary stats.
-   *
-   * @param int $idSite
-   * @param string $period
-   * @param string $date
-   * @param $space_id
-   * @param string $space_type
-   * @return \Piwik\DataTable
-   */
-  public function getSpaceSummary($idSite, $period, $date, $space_id, $space_type = 'operation')
-  {
-    $settings = $this->prepareSettingsForSpaceSummary($space_id, $space_type);
-    return $this->processSummary($idSite, $period, $date, $settings);
-  }
-
-  /**
-   * Display cluster summary stats.
-   *
-   * @param int $idSite
-   * @param string $period
-   * @param string $date
-   * @param $cluster_id
-   * @param string $cluster_type
-   * @return \Piwik\DataTable
-   */
-  public function getClusterSummary($idSite, $period, $date, $cluster_id, $cluster_type = 'bundle')
-  {
-    $settings = array(
-      'name' => 'customVariablePageName2',
-      'type' => $cluster_type . 's',
-      'context' => 'bundles',
-      'value' => 'customVariablePageValue2',
-      'id' => $cluster_id,
-    );
-    return $this->processSummary($idSite, $period, $date, $settings);
-  }
-
-  /**
-   * Helper function to display operation/cluster summary stats.
-   *
-   * @param $idSite
-   * @param $period
-   * @param $date
-   * @param $settings
-   *
-   * @return \Piwik\DataTable
-   */
-  protected function processSummary($idSite, $period, $date, $settings, $addCountry = true)
-  {
-    $table = new DataTable();
-    $segment = $settings['name'] . '==' . $settings['context'] . ';' . $settings['value'] . '=@' . $settings['id'];
-
-    // Build an archive to retrieve the information from the records.
-    $archive = Archive::build($idSite, $period, $date, $segment);
-    /* @var \Piwik\DataTable $tdata */
-    $data = $archive->getDataTableFromNumeric(array('nb_visits', 'Actions_nb_downloads'));
-
-    // Add the downloads by type.
-    $downloads = $this->attachDownloadByType($idSite, $period, $date, $segment);
-
-    $data->getRowFromId(0)->addColumns($downloads);
-    $table->addRow($data->getRowFromId(0));
-
-    // Calculate the right label and load the content.
-    if (empty($settings['label'])) {
-      $base_url = 'https://www.humanitarianresponse.info/api/v1.0/';
-      if ($content_raw = @file_get_contents($base_url . $settings['type'] . '/' . $settings['id'])) {
-        $hrContent = json_decode($content_raw);
-        $settings['label'] = $hrContent->data[0]->label;
-      }
-    }
-
-    // Add the label to the row.
-    $table->getRowFromId(0)->addColumn('label', $settings['label']);
-
-    // Only add country stats on demand.
-    if ($addCountry && !empty($hrContent)) {
-      $dataByCountry = $this->attachStatsbyCountry($hrContent, $idSite, $period, $date, $segment);
-      $table->addRow($dataByCountry->getRowFromId(0));
-    }
-
-    return $table;
-  }
-
-  /**
-   * Attach the downloads by type.
-   *
-   * @param $params
-   *
-   * @return array
-   */
-  private function attachDownloadByType($idSite, $period, $date, $segment)
-  {
-    $return = array();
-    $types = array(
-      'hr_document',
-      'hr_infographic',
-      'hr_dataset',
-      'hr_assessment'
-    );
-
-    foreach ($types as $type) {
-      $segmentByType = $segment . ';customVariablePageName3==type;customVariablePageValue3==' . $type;
-      $archive = Archive::build($idSite, $period, $date, $segmentByType);
-      /* @var \Piwik\DataTable $tdata */
-      $data = $archive->getDataTableFromNumeric(array('Actions_nb_downloads'));
-      $return['nb_downloads_'. $type] = $data[0]['Actions_nb_downloads'];
-    }
-    return $return;
-  }
-
-  /**
-   * Attach the country information on demand.
-   *
-   * @param $content
-   * @param $idSite
-   * @param $period
-   * @param $date
-   * @param $segment
-   * @return \Piwik\DataTable|\Piwik\DataTable\Map
-   */
-  private function attachStatsbyCountry($content, $idSite, $period, $date, $segment)
-  {
-    $data = new DataTable();
-
-    if ($iso2 = $this->getIso2Country($content->data[0])) {
-      $segmentByCountry = $segment . ';countryCode==' . $iso2;
-      $archiveByCountry = Archive::build($idSite, $period, $date, $segmentByCountry);
-      $data = $archiveByCountry->getDataTableFromNumeric(array('nb_visits', 'Actions_nb_downloads'));
-      $data->getRowFromId(0)->addColumn('label', $content->data[0]->label.' - in country');
-      $downloads = $this->attachDownloadByType($idSite, $period, $date, $segmentByCountry);
-      $data->getRowFromId(0)->addColumns($downloads);
-    }
-
-    return $data;
-  }
-
-  /**
-   * Retrieves the country iso2 from the space.
-   *
-   * @param $data
-   * @return bool
-   */
-  protected function getIso2Country($data)
-  {
-    if (isset($data->country)) {
-      return $data->country->pcode;
-    }
-
-    if (isset($data->operation[0]->country)) {
-      return $data->operation[0]->country->pcode;
-    }
-
-    return FALSE;
-  }
-
   /**
    * Another example method that returns a data table.
-   *
    * @param int    $idSite
    * @param string $period
    * @param string $date
    * @param bool|string $segment
    * @return DataTable
    */
-  public function getSummaryStats($idSite, $period, $date, $segment = false)
+  public function getSpaceSummary($idSite, $period, $date, $space_id, $space_type = 'operation')
   {
+
     $table = new DataTable();
 
-    $types = array(
-      'operations',
-      'spaces'
+    $params = array(
+      'idSite' => $idSite,
+      'period' => $period,
+      'date'   => $date,
+      'segment' => 'customVariablePageName1==spaces;customVariablePageValue1=@'.$space_id,
     );
-    foreach ($types as $type) {
-      $this->preProcessSummaryStats($table, $idSite, $period, $date, $type);
+
+    $data = \Piwik\API\Request::processRequest('API.get', $params);
+
+
+    $tarray = $this->getTypes($params);
+
+    $data->getRowFromId(0)->addColumns($tarray);
+
+    $table->addRow($data->getRowFromId(0));
+
+    // Get country ISO2 code
+    $hr_url = 'https://www.humanitarianresponse.info/api/v1.0/'.$space_type.'s/'.$space_id;
+    if ($space_raw = @file_get_contents($hr_url)) {
+      $space = json_decode($space_raw);
+      $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
+      if (isset($space->data[0]->country)) {
+        $iso2 = $space->data[0]->country->pcode;
+        $cparams = $params;
+        $cparams['segment'] = $params['segment'] . ';countryCode=='.$iso2;
+        $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
+        $cdata->getRowFromId(0)->addColumn('label', $space->data[0]->label.' - in country');
+        $ctarray = $this->getTypes($cparams);
+        $cdata->getRowFromId(0)->addColumns($ctarray);
+        $table->addRow($cdata->getRowFromId(0));
+      }
     }
 
     return $table;
   }
 
   /**
-   * Accumulate items on the stats datatable.
-   *
-   * @param \Piwik\DataTable $table
-   * @param $idSite
-   * @param $period
-   * @param $date
-   * @param $type
-   * @throws \Exception
+   * Another example method that returns a data table.
+   * @param int    $idSite
+   * @param string $period
+   * @param string $date
+   * @param bool|string $segment
+   * @return DataTable
    */
-  protected function preProcessSummaryStats(\Piwik\DataTable &$table, $idSite, $period, $date, $type)
+  public function getClusterSummary($idSite, $period, $date, $cluster_id, $cluster_type = 'bundle')
   {
-    $base_url = "https://www.humanitarianresponse.info/api/v1.0/$type/?fields=id,label";
-    if ($data_json = @file_get_contents($base_url)) {
-      $data = json_decode($data_json);
-      foreach ($data->data as $item) {
-        $settings = $this->prepareSettingsForSpaceSummary($item->id, $type, $item->label);
-        $datatable = $this->processSummary($idSite, $period, $date, $settings, false);
-        $table->addDataTable($datatable);
+
+    $table = new DataTable();
+
+    $params = array(
+      'idSite' => $idSite,
+      'period' => $period,
+      'date'   => $date,
+      'segment' => 'customVariablePageName2==' . $cluster_type . 's;customVariablePageValue2=@' . $cluster_id,
+    );
+
+    $data = \Piwik\API\Request::processRequest('API.get', $params);
+
+
+    $tarray = $this->getTypes($params);
+
+    $data->getRowFromId(0)->addColumns($tarray);
+
+    $table->addRow($data->getRowFromId(0));
+
+    // Get country ISO2 code
+    $hr_url = 'https://www.humanitarianresponse.info/api/v1.0/' . $cluster_type . 's/' . $cluster_id;
+    if ($space_raw = @file_get_contents($hr_url)) {
+      $space = json_decode($space_raw);
+      $table->getRowFromId(0)->addColumn('label', $space->data[0]->label);
+      if (isset($space->data[0]->operation[0]->country)) {
+        $iso2 = $space->data[0]->operation[0]->country->pcode;
+        $cparams = $params;
+        $cparams['segment'] = $params['segment'] . ';countryCode==' . $iso2;
+        $cdata = \Piwik\API\Request::processRequest('API.get', $cparams);
+        $cdata->getRowFromId(0)->addColumn('label', $space->data[0]->label.' - in country');
+        $ctarray = $this->getTypes($cparams);
+        $cdata->getRowFromId(0)->addColumns($ctarray);
+        $table->addRow($cdata->getRowFromId(0));
       }
     }
+
+    return $table;
   }
+
+    private function getTypes($params) {
+      $tarray = array();
+      $types = array('hr_document',
+        'hr_infographic',
+        'hr_dataset',
+        'hr_assessment');
+
+      foreach ($types as $type) {
+        $tparams = $params;
+        $tparams['segment'] = $params['segment'] . ';customVariablePageName3==type;customVariablePageValue3=='.$type;
+        $tdata = \Piwik\API\Request::processRequest('API.get', $tparams);
+        $tarray['nb_downloads_'.$type] = $tdata[0]['nb_downloads'];
+      }
+      return $tarray;
+    }
+
+
+    /**
+     * Another example method that returns a data table.
+     * @param int    $idSite
+     * @param string $period
+     * @param string $date
+     * @param bool|string $segment
+     * @return DataTable
+     */
+    public function getSummaryStats($idSite, $period, $date, $segment = false)
+    {
+        set_time_limit(600);
+        $table = new DataTable();
+        $operations_url = 'http://www.humanitarianresponse.info/api/v1.0/operations/?fields=id';
+        if ($operations_raw = @file_get_contents($operations_url)) {
+          $operations_json = json_decode($operations_raw);
+          foreach ($operations_json->data as $op_id) {
+            $temp = $this->getSpaceSummary($idSite, $period, $date, $op_id->id, 'operation');
+            $table->addRow($temp->getRowFromId(0));
+          }
+        }
+
+        $spaces_url = 'http://www.humanitarianresponse.info/api/v1.0/spaces/?fields=id';
+        if ($spaces_raw = @file_get_contents($spaces_url)) {
+          $spaces_json = json_decode($spaces_raw);
+          foreach ($spaces_json->data as $space_id) {
+            $temp = $this->getSpaceSummary($idSite, $period, $date, $space_id->id, 'space');
+            $table->addRow($temp->getRowFromId(0));
+          }
+        }
+
+        return $table;
+    }
 
 }
