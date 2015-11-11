@@ -116,7 +116,9 @@ class API extends \Piwik\Plugin\API
     // Only add country stats on demand.
     if ($addCountry && !empty($hrContent)) {
       $dataByCountry = $this->attachStatsbyCountry($hrContent, $idSite, $period, $date, $segment);
-      $table->addRow($dataByCountry->getRowFromId(0));
+      if ($row = $dataByCountry->getRowFromId(0)) {
+        $table->addRow($row);
+      }
     }
 
     return $table;
