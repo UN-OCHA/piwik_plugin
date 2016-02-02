@@ -8,6 +8,7 @@
  */
 namespace Piwik\Plugins\HumanitarianResponse\Reports;
 
+use Piwik\Common;
 use Piwik\Piwik;
 use Piwik\Plugin\Report;
 use Piwik\Plugin\ViewDataTable;
@@ -78,6 +79,10 @@ class GetSummaryStats extends Base
         $view->config->addTranslation('nb_downloads_hr_infographic', 'Number of infographic downloads');
         $view->config->addTranslation('nb_downloads_hr_assessment', 'Number of assessment downloads');
         $view->config->addTranslation('nb_downloads_hr_dataset', 'Number of dataset downloads');
+
+        // Add additional parameters to allow CSV and other format exports.
+        $view->requestConfig->request_parameters_to_modify['space_id'] = Common::getRequestVar('space_id', null, 'int');
+        $view->requestConfig->request_parameters_to_modify['space_type'] = Common::getRequestVar('space_type', 'operation', 'string');
 
         $view->config->columns_to_display = array('label', 'nb_visits', 'Actions_nb_downloads', 'nb_downloads_hr_document', 'nb_downloads_hr_infographic', 'nb_downloads_hr_assessment', 'nb_downloads_hr_dataset');
     }
